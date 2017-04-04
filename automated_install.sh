@@ -451,7 +451,7 @@ echo ""
 # Install dependencies
 echo "========== Update Aptitude ==========="
 sudo apt-get update
-sudo apt-get upgrade -y
+#sudo apt-get upgrade -y
 
 echo "========== Installing Git ============"
 sudo apt-get install -y git
@@ -471,16 +471,24 @@ sudo apt-get -y install libasound2-dev
 sudo apt-get -y install libatlas-base-dev
 sudo ldconfig
 
+echo "========== Installing WiringPi ==========="
+sudo apt-get -y install wiringpi
+sudo ldconfig
+
 echo "========== Installing VLC and associated Environmental Variables =========="
 sudo apt-get install -y vlc vlc-nox vlc-data
 #Make sure that the libraries can be found
-sudo sh -c "echo \"/usr/lib/vlc\" >> /etc/ld.so.conf.d/vlc_lib.conf"
-sudo sh -c "echo \"VLC_PLUGIN_PATH=\"/usr/lib/vlc/plugin\"\" >> /etc/environment"
+# Respect the user
+sudo sh -c "echo \"/usr/lib/vlc\" > /etc/ld.so.conf.d/vlc_avs_lib.conf"
+#sudo sh -c "echo \"VLC_PLUGIN_PATH=\"/usr/lib/vlc/plugin\"\" >> /etc/environment"
+sudo sh -c "echo \"export VLC_PLUGIN_PATH=\"/usr/lib/vlc/plugin\"\" > /etc/profile.d/vlc_avs.sh"
 sudo ldconfig
 
 echo "========== Installing NodeJS =========="
-sudo apt-get install -y nodejs npm build-essential
-sudo ln -s /usr/bin/nodejs /usr/bin/node
+#sudo apt-get install -y nodejs npm build-essential
+sudo apt-get install -y nodejs build-essential
+# Respect the user
+#sudo ln -s /usr/bin/nodejs /usr/bin/node
 node -v
 sudo ldconfig
 
@@ -494,6 +502,14 @@ sudo apt-get install -y openssl
 sudo ldconfig
 
 echo "========== Downloading and Building Port Audio Library needed for Kitt-Ai Snowboy =========="
+# Fix snowboy mistakes
+pa_patch_loc="$Kitt_Ai_Loc/snowboy/examples/C++/patches/portaudio.patch"
+pa_patch_url="https://raw.githubusercontent.com/Kitt-AI/snowboy/5b83cddf7f6aeef6834dee80f9d84cd17c074507/examples/C%2B%2B/patches/portaudio.patch"
+if [ ! -f $Kitt_Ai_Loc ]
+then
+  mkdir -p `dirname $pa_patch_loc`
+  curl -L -o $pa_patch_loc $pa_patch_url
+fi
 cd $Kitt_Ai_Loc/snowboy/examples/C++
 bash ./install_portaudio.sh
 sudo ldconfig
@@ -532,8 +548,8 @@ fi
 use_template $Java_Client_Loc template_config_json config.json
 
 echo "========== Configuring ALSA Devices =========="
-if [ -f /home/$User/.asoundrc ]; then
-  rm /home/$User/.asoundrc
+if [ -f $HOME/.asoundrc ]; then
+  rm $IHOME/.asoundrc
 fi
 printf "pcm.!default {\n  type asym\n   playback.pcm {\n     type plug\n     slave.pcm \"hw:0,0\"\n   }\n   capture.pcm {\n     type plug\n     slave.pcm \"hw:1,0\"\n   }\n}" >> /home/$User/.asoundrc
 
@@ -558,8 +574,8 @@ mkdir $External_Loc/resources
 
 cp $Kitt_Ai_Loc/snowboy/include/snowboy-detect.h $External_Loc/include/snowboy-detect.h
 cp $Kitt_Ai_Loc/snowboy/examples/C++/portaudio/install/include/portaudio.h $External_Loc/include/portaudio.h
-cp $Kitt_Ai_Loc/snowboy/examples/C++/portaudio/install/include/pa_ringbuffer.h $External_Loc/include/pa_ringbuffer.h
-cp $Kitt_Ai_Loc/snowboy/examples/C++/portaudio/install/include/pa_util.h $External_Loc/include/pa_util.h
+cp $Kitt_Ai_Loc/snowboy/examples/C++/portaudio/src/common/pa_ringbuffer.h $External_Loc/include/pa_ringbuffer.h
+cp $Kitt_Ai_Loc/snowboy/examples/C++/portaudio/src/common/pa_util.h $External_Loc/include/pa_util.h
 cp $Kitt_Ai_Loc/snowboy/lib/$OS/libsnowboy-detect.a $External_Loc/lib/libsnowboy-detect.a
 cp $Kitt_Ai_Loc/snowboy/examples/C++/portaudio/install/lib/libportaudio.a $External_Loc/lib/libportaudio.a
 cp $Kitt_Ai_Loc/snowboy/resources/common.res $External_Loc/resources/common.res
@@ -603,3 +619,4 @@ if [ "$Wake_Word_Detection_Enabled" = "true" ]; then
   echo "  GPIO: PLEASE NOTE -- If using this option, run the wake word agent as sudo:"
   echo "  cd $Wake_Word_Agent_Loc/src && sudo ./wakeWordAgent -e gpio"
 fi
+
